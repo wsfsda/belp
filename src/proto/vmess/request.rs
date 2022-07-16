@@ -513,21 +513,23 @@ mod test {
             TcpStream::connect("127.0.0.1:1234").await.unwrap();
 
         stream.write_all_buf(&mut header).await.unwrap();
-        stream.write_u16(body.len() as u16).await.unwrap();
-        stream.write_all(body).await.unwrap();
+        // stream.write_u16(body.len() as u16).await.unwrap();
+        // stream.write_all(body).await.unwrap();
         //stream.write_u16(0x00).await.unwrap();
 
-        let (mut s1, mut s2) = tokio::io::split(stream);
+        // let (mut s1, mut s2) = tokio::io::split(stream);
 
-        tokio::spawn(async move {
-            tokio::time::sleep(Duration::from_secs(5)).await;
-            s2.write_u16(0).await.unwrap();
-        });
+        // tokio::spawn(async move {
+        //     tokio::time::sleep(Duration::from_secs(5)).await;
+        //     s2.write_u16(0).await.unwrap();
+        // });
         let mut buf = [0; 1024];
 
         loop {
-            let n = s1.read(&mut buf).await.unwrap();
+            let n = stream.read(&mut buf).await.unwrap();
             println!("{:?}", n);
         }
+
+        
     }
 }

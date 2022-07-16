@@ -16,8 +16,10 @@ pub(crate) static RAND: Lazy<SystemRandom> = Lazy::new(|| {
 });
 
 pub(crate) static VMESS_AEAD_KDF: &[u8] = b"VMess AEAD KDF";
-pub(crate) static AES_AUTH_ID_ENCRYPTION: &[u8] = b"AES Auth ID Encryption";
-pub(crate) static VMESS_HEADER_AEAD_KEY_LENGTH: &[u8] = b"VMess Header AEAD Key_Length";
+pub(crate) static AES_AUTH_ID_ENCRYPTION: &[u8] =
+    b"AES Auth ID Encryption";
+pub(crate) static VMESS_HEADER_AEAD_KEY_LENGTH: &[u8] =
+    b"VMess Header AEAD Key_Length";
 pub(crate) static VMESS_HEADER_AEAD_NONCE_LENGTH: &[u8] =
     b"VMess Header AEAD Nonce_Length";
 pub(crate) static VMESS_HEADER_AEAD_KEY: &[u8] =
@@ -28,8 +30,10 @@ pub(crate) static AEAD_RESP_HEADER_LEN_KEY: &[u8] =
     b"AEAD Resp Header Len Key";
 pub(crate) static AEAD_RESP_HEADER_LEN_IV: &[u8] =
     b"AEAD Resp Header Len IV";
-pub(crate) static AEAD_RESP_HEADER_KEY: &[u8] = b"AEAD Resp Header Key";
-pub(crate) static AEAD_RESP_HEADER_IV: &[u8] = b"AEAD Resp Header IV";
+pub(crate) static AEAD_RESP_HEADER_KEY: &[u8] =
+    b"AEAD Resp Header Key";
+pub(crate) static AEAD_RESP_HEADER_IV: &[u8] =
+    b"AEAD Resp Header IV";
 
 #[derive(Clone)]
 pub(crate) struct VmessKdf1 {
@@ -164,7 +168,7 @@ fn get_vmess_kdf_1(data1: &[u8]) -> VmessKdf1 {
     VmessKdf1::new(ctx, data1)
 }
 
-pub fn vmess_kdf_1_one_shot(
+pub(crate) fn vmess_kdf_1_one_shot(
     cmd_key: &[u8],
     data1: &[u8],
 ) -> Tag {
@@ -185,7 +189,7 @@ fn get_vmess_kdf_3(
     VmessKdf3::new(get_vmess_kdf_2(key1, key2), key3)
 }
 
-pub fn vmess_kdf_3_one_shot(
+pub(crate) fn vmess_kdf_3_one_shot(
     cmd_key: &[u8],
     data1: &[u8],
     data2: &[u8],
@@ -196,7 +200,7 @@ pub fn vmess_kdf_3_one_shot(
     h.sign()
 }
 
-pub fn aes_123_gcm_seal<T: AsRef<[u8]>>(
+pub(crate) fn aes_123_gcm_seal<T: AsRef<[u8]>>(
     key: &[u8],
     nonce: &[u8],
     aad: Aad<T>,
@@ -209,7 +213,7 @@ pub fn aes_123_gcm_seal<T: AsRef<[u8]>>(
         .unwrap();
 }
 
-pub fn aes_123_gcm_open<T: AsRef<[u8]>>(
+pub(crate) fn aes_123_gcm_open<T: AsRef<[u8]>>(
     key: &[u8],
     nonce: &[u8],
     aad: Aad<T>,
@@ -226,16 +230,14 @@ pub fn aes_123_gcm_open<T: AsRef<[u8]>>(
 
 pub(crate) struct Fnv1a(u32);
 
-
 impl Fnv1a {
     const INIT: u32 = 0x811c9dc5u32;
 
-
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Fnv1a(Fnv1a::INIT)
     }
 
-    pub fn update(&mut self, data: impl AsRef<[u8]>) {
+    pub(crate) fn update(&mut self, data: impl AsRef<[u8]>) {
         let mut hash = self.0;
 
         for byte in data.as_ref().iter() {
@@ -246,7 +248,7 @@ impl Fnv1a {
         self.0 = hash
     }
 
-    pub fn finalize(self) -> u32 {
+    pub(crate) fn finalize(self) -> u32 {
         self.0
     }
 }
@@ -266,4 +268,3 @@ macro_rules! fnv1a {
 }
 
 pub(crate) use fnv1a;
-

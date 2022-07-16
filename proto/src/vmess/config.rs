@@ -1,12 +1,27 @@
+use super::{
+    encrypt::{
+        aes_123_gcm_seal, fnv1a, vmess_kdf_1_one_shot,
+        vmess_kdf_3_one_shot, AES_AUTH_ID_ENCRYPTION, RAND,
+        VMESS_HEADER_AEAD_KEY, VMESS_HEADER_AEAD_KEY_LENGTH,
+        VMESS_HEADER_AEAD_NONCE, VMESS_HEADER_AEAD_NONCE_LENGTH,
+    },
+    Result,
+};
 use std::{net::SocketAddr, time};
-use super::{Result, encrypt::{RAND, fnv1a, vmess_kdf_1_one_shot, AES_AUTH_ID_ENCRYPTION, vmess_kdf_3_one_shot, VMESS_HEADER_AEAD_KEY_LENGTH, VMESS_HEADER_AEAD_NONCE_LENGTH, aes_123_gcm_seal, VMESS_HEADER_AEAD_KEY, VMESS_HEADER_AEAD_NONCE}};
 
-use aes::{Aes128, cipher::{KeyInit, BlockEncrypt}};
-use bytes::{Bytes, BytesMut, Buf, BufMut};
-use http::Uri;
-use md5::{Md5,Digest};
+use aes::{
+    cipher::{BlockEncrypt, KeyInit},
+    Aes128,
+};
+use bytes::{Buf, BufMut, Bytes, BytesMut};
 use crc32fast::Hasher as Crc32;
-use ring::{rand::SecureRandom, digest::{digest, SHA256}, aead::Aad};
+use http::Uri;
+use md5::{Digest, Md5};
+use ring::{
+    aead::Aad,
+    digest::{digest, SHA256},
+    rand::SecureRandom,
+};
 use uuid::Uuid;
 
 pub(crate) struct ResConfig {
@@ -15,12 +30,12 @@ pub(crate) struct ResConfig {
     // v 32..32
     // res_key 33..49
     // res_iv 49..65
-    config: Bytes,
-    encrytin: Encryption,
-} 
+    pub(crate) config: Bytes,
+    pub(crate) encrytin: Encryption,
+}
 
 pub struct Config {
-    parts: Parts
+    parts: Parts,
 }
 
 impl Config {
@@ -243,7 +258,6 @@ impl Config {
 
         buf.unsplit(behind);
     }
-
 }
 
 pub struct Builder {
@@ -252,7 +266,9 @@ pub struct Builder {
 
 impl Builder {
     fn new() -> Self {
-        Builder { inner: Ok(Parts::new()) }
+        Builder {
+            inner: Ok(Parts::new()),
+        }
     }
 
     pub fn build(self) -> Result<Config> {
@@ -262,7 +278,7 @@ impl Builder {
             return Err(ErrorKind::EmptyUuid.into());
         }
 
-        if parts.dst_addr.is_empty()  {
+        if parts.dst_addr.is_empty() {
             return Err(ErrorKind::EmptyDstAddr.into());
         }
 
@@ -270,9 +286,7 @@ impl Builder {
             return Err(ErrorKind::EmptyServerAddr.into());
         }
 
-        Ok(Config {
-            parts,
-        })
+        Ok(Config { parts })
     }
 
     pub fn uuid<T>(self, uuid: T) -> Self
@@ -337,7 +351,6 @@ impl Default for Builder {
     }
 }
 
-
 pub(crate) struct Parts {
     uuid: Uuid,
     version: Version,
@@ -349,7 +362,7 @@ pub(crate) struct Parts {
 }
 
 impl Parts {
-    fn new() -> Self{
+    fn new() -> Self {
         Parts {
             uuid: Uuid::default(),
             version: Version::V1,
@@ -383,7 +396,7 @@ pub enum Opt {
     M,
 }
 
-#[derive(Debug,Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 pub enum Encryption {
     Aes123Gcm,
     ChaCha20Poly1305,
