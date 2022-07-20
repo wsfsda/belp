@@ -1,5 +1,5 @@
 mod channel;
-mod codec;
+pub(crate) mod codec;
 pub(crate) mod config;
 mod conn;
 pub(crate) mod encrypt;

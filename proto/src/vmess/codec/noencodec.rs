@@ -1,21 +1,37 @@
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use ring::aead::Aad;
 use tokio_util::codec::{Decoder, Encoder};
+use tracing::instrument;
 
 use crate::vmess::config::ResConfig;
 use crate::vmess::conn::InvalidHead;
 use crate::vmess::encrypt::{
-    aes_123_gcm_open, vmess_kdf_1_one_shot,
-    AEAD_RESP_HEADER_LEN_IV, AEAD_RESP_HEADER_LEN_KEY,
+    aes_123_gcm_open, vmess_kdf_1_one_shot, AEAD_RESP_HEADER_IV,
+    AEAD_RESP_HEADER_KEY, AEAD_RESP_HEADER_LEN_IV,
+    AEAD_RESP_HEADER_LEN_KEY,
 };
 use crate::vmess::{Error, Result};
 
-struct NoEnCodec {
+use super::Shutdown;
+
+pub(crate) struct NoEnCodec {
     config: ResConfig,
     head: Option<Bytes>,
     is_send_head: bool,
     is_recv_head: bool,
     is_parse_head_len: bool,
+}
+
+impl NoEnCodec {
+    pub(crate) fn new(header: Bytes, config: ResConfig) -> Self {
+        NoEnCodec {
+            config,
+            head: Some(header),
+            is_send_head: false,
+            is_recv_head: false,
+            is_parse_head_len: false,
+        }
+    }
 }
 
 impl NoEnCodec {
@@ -40,6 +56,7 @@ impl NoEnCodec {
         Ok(Some(()))
     }
 
+    #[instrument(skip(self), err(Debug))]
     fn parse_head_len(
         &mut self,
         src: &mut BytesMut,
@@ -71,6 +88,7 @@ impl NoEnCodec {
         Ok(len)
     }
 
+    #[instrument(skip(self, src), err(Debug))]
     fn parse_head(
         &mut self,
         len: usize,
@@ -78,12 +96,12 @@ impl NoEnCodec {
     ) -> Result<()> {
         let key = vmess_kdf_1_one_shot(
             &self.config.config[33..49],
-            AEAD_RESP_HEADER_LEN_KEY,
+            AEAD_RESP_HEADER_KEY,
         );
 
         let nonce = vmess_kdf_1_one_shot(
             &self.config.config[49..65],
-            AEAD_RESP_HEADER_LEN_IV,
+            AEAD_RESP_HEADER_IV,
         );
 
         aes_123_gcm_open(
@@ -130,8 +148,7 @@ impl Decoder for NoEnCodec {
         }
 
         let len = buf.get_u16() as usize;
-
-        if buf.len() < 2 + len {
+        if buf.len() < len {
             return Ok(None);
         }
 
@@ -153,8 +170,8 @@ impl Encoder<BytesMut> for NoEnCodec {
     ) -> Result<()> {
         if !self.is_send_head {
             let head = self.head.take().expect("没有加密的头");
-
             dst.put(head);
+            self.is_send_head = true;
         }
 
         let mut buf = item;
@@ -170,6 +187,20 @@ impl Encoder<BytesMut> for NoEnCodec {
 
             buf.advance(len);
         }
+
+        Ok(())
+    }
+}
+
+impl Encoder<Shutdown> for NoEnCodec {
+    type Error = Error;
+
+    fn encode(
+        &mut self,
+        _item: Shutdown,
+        dst: &mut BytesMut,
+    ) -> Result<()> {
+        dst.put_u16(0);
 
         Ok(())
     }

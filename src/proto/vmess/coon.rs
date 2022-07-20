@@ -380,8 +380,7 @@ mod test {
         }
 
         fn host_addr(uri: &http::Uri) -> Option<String> {
-            uri.authority()
-                .and_then(|auth| Some(auth.to_string()))
+            uri.authority().map(|auth| auth.to_string())
         }
 
         // Create a TCP connection to host:port, build a tunnel between the connection and

@@ -1,3 +1,6 @@
+use tokio::sync::{mpsc, oneshot};
+
+#[derive(Debug)]
 pub struct Error {
     inner: ErrorKind,
 }
@@ -10,6 +13,7 @@ impl Error {
     }
 }
 
+#[derive(Debug)]
 enum ErrorKind {
     Uri(http::uri::InvalidUri),
     Uuid(uuid::Error),
@@ -67,8 +71,16 @@ impl From<want::Closed> for Error {
     }
 }
 
-impl<T> From<tokio::sync::mpsc::error::SendError<T>> for Error {
-    fn from(_: tokio::sync::mpsc::error::SendError<T>) -> Self {
+impl<T> From<mpsc::error::SendError<T>> for Error {
+    fn from(_: mpsc::error::SendError<T>) -> Self {
+        Error {
+            inner: ErrorKind::ChannelClose,
+        }
+    }
+}
+
+impl From<oneshot::error::RecvError> for Error {
+    fn from(_: oneshot::error::RecvError) -> Self {
         Error {
             inner: ErrorKind::ChannelClose,
         }

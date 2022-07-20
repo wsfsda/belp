@@ -61,8 +61,8 @@ impl Config {
     }
 
     #[inline]
-    pub(crate) fn ref_parts(&self) -> &Parts {
-        &self.parts
+    pub(crate) fn get_ref_server_addr(&self) -> &Addr {
+        &self.parts.server_addr
     }
 
     fn header(&self) -> (BytesMut, usize, ResConfig) {
@@ -275,15 +275,15 @@ impl Builder {
         let parts = self.inner?;
 
         if parts.uuid.is_nil() {
-            return Err(ErrorKind::EmptyUuid.into());
+            return Err(ErrorKind::Uuid.into());
         }
 
         if parts.dst_addr.is_empty() {
-            return Err(ErrorKind::EmptyDstAddr.into());
+            return Err(ErrorKind::DstAddr.into());
         }
 
         if parts.server_addr.is_empty() {
-            return Err(ErrorKind::EmptyServerAddr.into());
+            return Err(ErrorKind::ServerAddr.into());
         }
 
         Ok(Config { parts })
@@ -381,10 +381,11 @@ impl Default for Parts {
     }
 }
 
+#[derive(Debug)]
 pub(crate) enum ErrorKind {
-    EmptyUuid,
-    EmptyServerAddr,
-    EmptyDstAddr,
+    Uuid,
+    ServerAddr,
+    DstAddr,
 }
 
 enum Version {

@@ -3,22 +3,16 @@ use std::{
     task::{Context, Poll},
 };
 
-use async_speed_limit::{
-    clock::{Clock, StandardClock},
-    Limiter, Resource,
-};
+use async_speed_limit::{clock::Clock, Limiter, Resource};
 use futures::Future;
 use pin_project_lite::pin_project;
 use tokio::io::{AsyncRead, AsyncWrite};
-use tokio_util::compat::{
-    Compat, FuturesAsyncReadCompatExt, TokioAsyncReadCompatExt,
-};
 
 pin_project! {
-    struct LimitStream<T> {
+    pub(crate) struct LimitStream<T> {
         #[pin]
-        inner: Compat<Resource<Compat<T>,StandardClock>>,
-        limiter: Limiter,
+        inner: Resource<T,TokioClock>,
+        limiter: Limiter<TokioClock>,
     }
 }
 
@@ -26,23 +20,25 @@ impl<T> LimitStream<T>
 where
     T: AsyncRead + AsyncWrite,
 {
-    fn new(stream: T) -> Self {
-        let compat = stream.compat();
-        let limiter = Limiter::new(f64::INFINITY);
+    pub(crate) fn new(stream: T) -> Self {
+        // let compat = stream.compat();
+        let limiter = Limiter::builder(f64::INFINITY)
+            .clock(TokioClock)
+            .build();
 
-        let inner = limiter.clone().limit(compat);
-        let inner = inner.compat();
+        let inner = limiter.clone().limit(stream);
+        // let inner = inner.compat();
 
         Self { inner, limiter }
     }
 }
 
 impl<T> LimitStream<T> {
-    fn set_speed_limit(&self, speed_limit: f64) {
+    pub(crate) fn set_speed_limit(&self, speed_limit: f64) {
         self.limiter.set_speed_limit(speed_limit)
     }
 
-    fn total_bytes(&self) -> usize {
+    pub(crate) fn total_bytes(&self) -> usize {
         self.limiter.total_bytes_consumed()
     }
 }
@@ -90,21 +86,22 @@ where
 #[derive(Clone, Default)]
 struct TokioClock;
 
-// impl Clock for TokioClock {
-//     type Instant = std::time::Instant;
+impl Clock for TokioClock {
+    type Instant = std::time::Instant;
 
-//     type Delay = Delay;
+    type Delay = Delay;
 
-//     fn now(&self) -> Self::Instant {
-//         std::time::Instant::now()
-//     }
+    fn now(&self) -> Self::Instant {
+        std::time::Instant::now()
+    }
 
-//     fn sleep(&self, dur: std::time::Duration) -> Self::Delay {
-//         Delay {
-//             inner: tokio::time::sleep(dur),
-//         }
-//     }
-// }
+    fn sleep(&self, dur: std::time::Duration) -> Self::Delay {
+        tracing::trace!("sleep time : {}", dur.as_secs());
+        Delay {
+            inner: tokio::time::sleep(dur),
+        }
+    }
+}
 
 pin_project! {
     struct Delay {
@@ -137,8 +134,9 @@ mod tests {
         let data = "Hello World".as_bytes().to_vec();
         let cur = Cursor::new(data);
 
-        let mut stream = LimitStream::new(cur);
+        let stream = LimitStream::new(cur);
         stream.set_speed_limit(1.0);
+        tokio::pin!(stream);
         let instant = Instant::now();
         let mut buf = [0; 1024];
         loop {
@@ -148,7 +146,7 @@ mod tests {
                 break;
             }
         }
-
+        println!("{:?}", stream.total_bytes());
         println!("{:?}", instant.elapsed().as_secs());
     }
 }

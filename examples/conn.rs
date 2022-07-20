@@ -18,7 +18,9 @@ type HttpClient = Client<hyper::client::HttpConnector>;
 async fn main() {
     tracing_subscriber::fmt::Subscriber::builder()
         .pretty()
-        .with_env_filter(EnvFilter::new("belp=trace"))
+        .with_env_filter(EnvFilter::new(
+            "belp::proto::vmess::client=warn",
+        ))
         .try_init()
         .unwrap();
 
@@ -109,7 +111,7 @@ async fn proxy(
 }
 
 fn host_addr(uri: &http::Uri) -> Option<String> {
-    uri.authority().and_then(|auth| Some(auth.to_string()))
+    uri.authority().map(|auth| auth.to_string())
 }
 
 // Create a TCP connection to host:port, build a tunnel between the connection and

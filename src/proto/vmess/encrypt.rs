@@ -251,6 +251,12 @@ impl Fnv1a {
     }
 }
 
+impl Default for Fnv1a {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 macro_rules! fnv1a {
   ($($x:expr),+) => {
       {

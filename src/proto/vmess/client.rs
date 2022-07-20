@@ -34,6 +34,12 @@ impl<I> Client<I> {
     }
 }
 
+impl<I> Default for Client<I> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<I> Client<I>
 where
     I: AsyncRead + AsyncWrite + Unpin + Send + 'static,
@@ -125,8 +131,9 @@ impl<I> Pool<PoolClient<I>> {
         key: &Key,
     ) -> Option<Pooled<PoolClient<I>>> {
         let mut inner = self.inner.as_mut()?.lock().unwrap();
+        // tracing::warn!("map: {:#?}", inner.map);
         let vpclient = inner.map.get_mut(key)?;
-        tracing::warn!("map: {:?}", vpclient);
+        tracing::warn!("vec: {:#?}", vpclient);
 
         while let Some(pclient) = vpclient.pop() {
             if pclient.is_closed() {
@@ -134,12 +141,13 @@ impl<I> Pool<PoolClient<I>> {
             }
 
             if pclient.is_ready() {
-                tracing::warn!("map: {:?}", vpclient);
+                // tracing::warn!("map: {:?}", vpclient);
 
                 drop(inner);
 
                 let weak =
                     Arc::downgrade(self.inner.as_ref().unwrap());
+                tracing::warn!("有没有关闭的连接 {:#?}", key);
 
                 return Some(Pooled {
                     value: Some(pclient),

@@ -365,6 +365,12 @@ impl Builder {
     }
 }
 
+impl Default for Builder {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 pub struct Parts {
     uuid: Uuid,
     version: Version,
@@ -433,10 +439,14 @@ impl Parts {
     }
 }
 
+impl Default for Parts {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[cfg(test)]
 mod test {
-
-    use std::time::Duration;
 
     use bytes::BytesMut;
 
@@ -513,9 +523,9 @@ mod test {
             TcpStream::connect("127.0.0.1:1234").await.unwrap();
 
         stream.write_all_buf(&mut header).await.unwrap();
-        // stream.write_u16(body.len() as u16).await.unwrap();
-        // stream.write_all(body).await.unwrap();
-        //stream.write_u16(0x00).await.unwrap();
+        stream.write_u16(body.len() as u16).await.unwrap();
+        stream.write_all(body).await.unwrap();
+        stream.write_u16(0x00).await.unwrap();
 
         // let (mut s1, mut s2) = tokio::io::split(stream);
 
@@ -529,7 +539,5 @@ mod test {
             let n = stream.read(&mut buf).await.unwrap();
             println!("{:?}", n);
         }
-
-        
     }
 }
