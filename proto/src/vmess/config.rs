@@ -7,7 +7,8 @@ use super::{
     },
     Result,
 };
-use std::{net::SocketAddr, time};
+use core::fmt;
+use std::{fmt::Debug, net::SocketAddr, time};
 
 use aes::{
     cipher::{BlockEncrypt, KeyInit},
@@ -22,6 +23,7 @@ use ring::{
     digest::{digest, SHA256},
     rand::SecureRandom,
 };
+use serde::Deserialize;
 use uuid::Uuid;
 
 pub(crate) struct ResConfig {
@@ -36,6 +38,18 @@ pub(crate) struct ResConfig {
 
 pub struct Config {
     parts: Parts,
+}
+
+impl Debug for Config {
+    fn fmt(
+        &self,
+        f: &mut std::fmt::Formatter<'_>,
+    ) -> std::fmt::Result {
+        f.write_fmt(format_args!(
+            "proxy {:?} at server {:?}",
+            self.parts.dst_addr, self.parts.server_addr
+        ))
+    }
 }
 
 impl Config {
@@ -397,11 +411,18 @@ pub enum Opt {
     M,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Deserialize)]
+#[serde(rename_all = "lowercase")]
 pub enum Encryption {
     Aes123Gcm,
     ChaCha20Poly1305,
     None,
+}
+
+impl Default for Encryption {
+    fn default() -> Self {
+        Encryption::None
+    }
 }
 
 pub enum Cmd {
@@ -412,6 +433,18 @@ pub enum Cmd {
 pub enum Addr {
     SocketAddr(SocketAddr),
     Host(Uri),
+}
+
+impl Debug for Addr {
+    fn fmt(
+        &self,
+        fmt: &mut std::fmt::Formatter<'_>,
+    ) -> std::fmt::Result {
+        match self {
+            Self::SocketAddr(arg0) => fmt::Debug::fmt(arg0, fmt),
+            Self::Host(arg0) => fmt::Debug::fmt(arg0, fmt),
+        }
+    }
 }
 
 impl Addr {

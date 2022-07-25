@@ -10,28 +10,22 @@ use tokio::{
     sync::{mpsc, oneshot},
 };
 
-pub(crate) struct Sender {
+pub struct Sender {
     inner: mpsc::UnboundedSender<Message>,
 }
 
 impl Sender {
-    pub(crate) fn set_upload_speed(
-        &self,
-        speed: f64,
-    ) -> Result<()> {
+    pub fn set_upload_speed(&self, speed: f64) -> Result<()> {
         self.inner.send(Message::SetUploadSpeed(speed))?;
         Ok(())
     }
 
-    pub(crate) fn set_download_speed(
-        &self,
-        speed: f64,
-    ) -> Result<()> {
+    pub fn set_download_speed(&self, speed: f64) -> Result<()> {
         self.inner.send(Message::SetDownloadSpeed(speed))?;
         Ok(())
     }
 
-    pub(crate) fn total_upload_bytes(
+    pub fn total_upload_bytes(
         &self,
     ) -> impl Future<Output = Result<usize>> {
         let (tx, rx) = oneshot::channel();
@@ -45,7 +39,7 @@ impl Sender {
         Either::Right(rx.map_err(Into::into))
     }
 
-    pub(crate) fn total_download_bytes(
+    pub fn total_download_bytes(
         &self,
     ) -> impl Future<Output = Result<usize>> {
         let (tx, rx) = oneshot::channel();
@@ -59,10 +53,11 @@ impl Sender {
         Either::Right(rx.map_err(Into::into))
     }
 
-    pub(crate) fn is_closed(&self) -> bool {
+    fn is_closed(&self) -> bool {
         self.inner.is_closed()
     }
 
+    #[cfg(test)]
     pub(crate) async fn closed(&self) {
         self.inner.closed().await;
     }
@@ -77,6 +72,7 @@ pub(crate) enum Message {
 
 pub(crate) struct Receiver {
     inner: mpsc::UnboundedReceiver<Message>,
+    _taker: want::Taker,
 }
 
 impl Receiver {
@@ -138,17 +134,23 @@ impl Receiver {
         }
     }
 
-    fn close(&mut self) {
+    #[cfg(test)]
+    fn _close(&mut self) {
         self.inner.close()
     }
 }
 
-pub(crate) fn channel() -> (Sender, Receiver) {
+pub(crate) fn channel() -> (Sender, Receiver, want::Giver) {
     let (tx, rx) = mpsc::unbounded_channel();
+
+    let (giver, taker) = want::new();
 
     let sender = Sender { inner: tx };
 
-    let receiver = Receiver { inner: rx };
+    let receiver = Receiver {
+        inner: rx,
+        _taker: taker,
+    };
 
-    (sender, receiver)
+    (sender, receiver, giver)
 }

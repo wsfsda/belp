@@ -1,0 +1,9 @@
+rules = [["Suffix", "fb.com", "🔰国外流量"], ["Keyword", "facebook", "🔰国外流量"]]
+
+[[services]]
+name = "ss"
+type = "vmess"
+server = "ss.dsds"
+port = 1131
+uuid = "323232323"
+cipher = "aes123gcm"

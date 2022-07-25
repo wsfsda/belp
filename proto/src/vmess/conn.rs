@@ -26,7 +26,7 @@ use super::{
 
 pin_project! {
     #[project = ConnectionsProj]
-    enum Connections<T1, T2> {
+    pub(crate) enum Connections<T1, T2> {
         NoEN{#[pin] conn: Connection<T1, T2, NoEnCodec, BytesCodec>},
         Aes128Gcm{#[pin] conn: Connection<T1, T2, Aes128GcmCodec, BytesCodec>},
     }
@@ -37,12 +37,12 @@ where
     T1: AsyncWrite + AsyncRead,
     T2: AsyncRead + AsyncWrite,
 {
-    fn handshake(
+    pub(crate) fn handshake(
         s_stream: T1,
         p_stream: T2,
-        config: Config,
-    ) -> (Sender, Self) {
-        let (tx, rx) = super::channel::channel();
+        config: &Config,
+    ) -> (Sender, Self, want::Giver) {
+        let (tx, rx, giver) = super::channel::channel();
         let (head, resconfig) = config.seal_header();
 
         match resconfig.encrytin {
@@ -62,6 +62,7 @@ where
                             p_codec, s_codec, rx,
                         ),
                     },
+                    giver,
                 )
             }
         }
@@ -87,7 +88,7 @@ where
 }
 
 pin_project! {
-    struct Connection<T1,T2, U1,U2> {
+    pub(crate) struct Connection<T1,T2, U1,U2> {
         #[pin]
         s_codec: Codec<T1, U1>,
         #[pin]
@@ -314,7 +315,8 @@ where
         }
     }
 
-    fn with_capacity(
+    #[cfg(test)]
+    fn _with_capacity(
         stream: T,
         codec: U,
         capacity: usize,
@@ -542,12 +544,13 @@ mod test {
                 )))
                 .build()
                 .expect("ss");
+            println!("{:?}", config);
             let s_stream = TcpStream::connect("127.0.0.1:1234")
                 .await
                 .unwrap();
 
-            let (sender, conn) = Connections::handshake(
-                s_stream, p_stream, config,
+            let (sender, conn, _) = Connections::handshake(
+                s_stream, p_stream, &config,
             );
             // if let Err(e) = sender.set_download_speed(10.240) {
             //     println!("{:?}", e);
